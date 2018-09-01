@@ -31,14 +31,19 @@ class Naub extends React.Component {
     }
     this.handleClick = this.handleClick.bind(this)
   }
+  refreshLog() {
+    this.setState(state => {
+      state.channels = Object.values(apiLog.look())
+      return state
+    })
+  }
   handleClick(btn) {
     const startAt = +new Date()
+    const traceId = apiLog.traceStart(btn)
+    this.refreshLog()
     return toast(btn).then(({ data: { data } }) => {
-      apiLog.trace(btn, { startAt, data })
-      this.setState(state => {
-        state.channels = Object.values(apiLog.look())
-        return state
-      })
+      apiLog.traceEnd(traceId, { startAt, data })
+      this.refreshLog()
       switch (btn) {
         case 'setWxappId':
           return this.handleClick('check')
@@ -46,6 +51,8 @@ class Naub extends React.Component {
           this.setState(state => Object.assign(state, data))
           break
         case 'qrcode':
+          this.setState({ qrImg: data.qrcode })
+          break
         case 'status':
         case 'info':
 
