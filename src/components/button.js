@@ -1,0 +1,20 @@
+import React from 'react'
+
+class Button extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {}
+
+    this.debug = this.debug.bind(this)
+  }
+  debug(...x) {
+    if (this.props.onClick) {
+      this.props.onClick()
+    } else console.warn(...x)
+  }
+  render() {
+    return <button onClick={this.debug}>{this.props.children}</button>
+  }
+}
+
+export default Button
