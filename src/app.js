@@ -27,9 +27,22 @@ class Naub extends React.Component {
       uploadStatus: 0,
       wxappId: '',
       webappId: '',
-      channels: []
+      channels: [],
+      queryQR: {},
+      btnStatus: {
+        create: false,
+        upload: true,
+        check: false,
+        setWxappId: false,
+        'admin-scan': false,
+        'admin-check': false,
+        qrcode: false,
+        status: false,
+        info: false
+      }
     }
     this.handleClick = this.handleClick.bind(this)
+    this.validate = this.validate.bind(this)
   }
   refreshLog() {
     this.setState(state => {
@@ -37,13 +50,27 @@ class Naub extends React.Component {
       return state
     })
   }
-  handleClick(btn) {
+  async validate(btn) {
+    switch (btn) {
+      case 'qrcode':
+        if (this.state.userInfo.signatureExpiredTime > +new Date()) {
+          throw new Error('上次登陆在有效期内')
+        }
+        break
+      default:
+    }
+  }
+  async handleClick(btn) {
+    await this.validate(btn)
     const startAt = +new Date()
     const traceId = apiLog.traceStart(btn)
+    this.setState(state => {
+      state.btnStatus[btn] = true
+    })
     this.refreshLog()
+
     return toast(btn).then(({ data: { data } }) => {
       apiLog.traceEnd(traceId, { startAt, data })
-      this.refreshLog()
       switch (btn) {
         case 'setWxappId':
           return this.handleClick('check')
@@ -51,14 +78,38 @@ class Naub extends React.Component {
           this.setState(state => Object.assign(state, data))
           break
         case 'qrcode':
-          this.setState({ qrImg: data.qrcode })
+          if (data.qrcode) {
+            this.setState(state => {
+              state.queryQR.qrcode = data.qrcode
+            })
+            this.handleClick('status')
+          }
           break
         case 'status':
+          switch (data.wx_errcode) {
+            case 405:
+              this.handleClick('info')
+              break
+            case 404:
+            case 408:
+              this.handleClick('status')
+              break
+            default:
+          }
+          break
         case 'info':
 
         default:
       }
+
+      this.setState(state => {
+        state.btnStatus[btn] = false
+      })
+      this.refreshLog()
     })
+  }
+  componentDidMount() {
+    this.handleClick('check')
   }
   render() {
     return (
@@ -80,7 +131,11 @@ class Naub extends React.Component {
           ].map(
             (btn, idx) =>
               btn ? (
-                <Button key={idx} onClick={this.handleClick.bind(null, btn)}>
+                <Button
+                  pending={this.state.btnStatus[btn]}
+                  key={idx}
+                  onClick={this.handleClick.bind(null, btn)}
+                >
                   {btnDict[btn] || btn}
                 </Button>
               ) : (
@@ -97,7 +152,11 @@ class Naub extends React.Component {
           </pre>
         </div>
         <div className="qrImg">
-          {this.state.qrImg ? <img src={this.state.qrImg} /> : ''}
+          {this.state.queryQR.qrcode ? (
+            <img width="192" src={this.state.queryQR.qrcode} />
+          ) : (
+            <div className="img" />
+          )}
         </div>
         <div className="api-log">
           <div className="channels">

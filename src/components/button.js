@@ -1,5 +1,7 @@
 import React from 'react'
 
+import './button.less'
+
 class Button extends React.Component {
   constructor(props) {
     super(props)
@@ -13,7 +15,11 @@ class Button extends React.Component {
     } else console.warn(...x)
   }
   render() {
-    return <button onClick={this.debug}>{this.props.children}</button>
+    return this.props.pending ? (
+      <span className="btn">{this.props.children}</span>
+    ) : (
+      <button onClick={this.debug}>{this.props.children}</button>
+    )
   }
 }
 

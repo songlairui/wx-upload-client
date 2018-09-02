@@ -1,7 +1,9 @@
 import axios from 'axios'
 
+const hostname = location.hostname
+
 const http = axios.create({
-  baseURL: 'http://10.5.24.107:7070'
+  baseURL: `http://${hostname}:7070`
 })
 
 export async function toast(action) {
