@@ -127,7 +127,13 @@ class Naub extends React.Component {
             0,
             'qrcode',
             'status',
-            'info'
+            'info',
+            0,
+            'ticket',
+            0,
+            'compile',
+            'commit',
+            'sync'
           ].map(
             (btn, idx) =>
               btn ? (
