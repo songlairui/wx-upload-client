@@ -6,8 +6,8 @@ const http = axios.create({
   baseURL: `http://${hostname}:7070`
 })
 
-export async function toast(action) {
-  return http.post('/toast', { action })
+export async function toast(action, payload) {
+  return http.post('/toast', { action, payload })
 }
 
 export async function prepare(params) {

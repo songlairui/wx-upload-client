@@ -21,12 +21,16 @@ class Naub extends React.Component {
     super(props)
 
     this.state = {
+      form: {
+        appid: '',
+        projectname: ''
+      },
       loginStatus: 0,
       userInfo: {},
       qrImg: '',
       uploadStatus: 0,
-      wxappId: '',
-      webappId: '',
+      wxappid: '',
+      webappid: '',
       channels: [],
       queryQR: {},
       btnStatus: {
@@ -42,6 +46,7 @@ class Naub extends React.Component {
       }
     }
     this.handleClick = this.handleClick.bind(this)
+    this.handleChange = this.handleChange.bind(this)
     this.validate = this.validate.bind(this)
   }
   refreshLog() {
@@ -69,13 +74,18 @@ class Naub extends React.Component {
     })
     this.refreshLog()
 
-    return toast(btn).then(({ data: { data } }) => {
+    return toast(btn, ['setWxappId'].includes(btn) && this.state.form).then(({ data: { data } }) => {
       apiLog.traceEnd(traceId, { startAt, data })
       switch (btn) {
         case 'setWxappId':
-          return this.handleClick('check')
+          this.handleClick('check')
+          break
         case 'check':
-          this.setState(state => Object.assign(state, data))
+          this.setState(state => {
+            Object.assign(state, data)
+            state.form.appid = state.appInfo.appid || state.form.appid
+            return state
+          })
           break
         case 'qrcode':
           if (data.qrcode) {
@@ -108,19 +118,33 @@ class Naub extends React.Component {
       this.refreshLog()
     })
   }
+  handleChange(type, e){
+    if(!e) return
+    const value = e.target.value
+    this.setState(state => {
+      state.form[type] = value
+      return state
+    })
+  }
   componentDidMount() {
     this.handleClick('check')
   }
   render() {
     return (
       <div className="main">
+        <div className="meta">
+          {['appid', 'projectname'].map(key => (
+            <input type="text" key={key} value={this.state.form[key]} onChange={this.handleChange.bind(this, key)} placeholder={`请输入 ${key}`}/>
+          ))}
+          常用小程序id: wx898945e5568b4ea3
+        </div>
         <div className="actions">
           {[
+            'setWxappId',
+            0,
             'create',
             'upload',
             'check',
-            0,
-            'setWxappId',
             0,
             'admin-scan',
             'admin-check',
@@ -151,10 +175,10 @@ class Naub extends React.Component {
         </div>
         <div className="meta">
           <pre>
-            wxappId:
-            {this.state.wxappId + '\n'}
-            webappId:
-            {this.state.webappId + '\n'}
+            wxappid:
+            {this.state.wxappid + '\n'}
+            webappid:
+            {this.state.webappid + '\n'}
           </pre>
         </div>
         <div className="qrImg">
@@ -170,7 +194,7 @@ class Naub extends React.Component {
               <div className="channel" key={channel.name}>
                 {channel.name}
                 <ul>
-                  {channel.trace.map((trace, idx) => (
+                  {channel.trace.reverse().map((trace, idx) => (
                     <li key={idx}>
                       <div className="stamp">
                         {trace.startAt} - {trace.endAt}
