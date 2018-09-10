@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom'
 import _ from 'lodash'
 
 import Button from './components/button'
+import ButtonGroup from './components/button-group'
 import { toast } from './api'
 
 const btnDict = {
@@ -23,7 +24,10 @@ class Naub extends React.Component {
     this.state = {
       form: {
         appid: '',
-        projectname: ''
+        projectname: '',
+        webappid: 'random-id',
+        zipurl:
+          'http://paas-dist.oss-cn-hangzhou.aliyuncs.com/prod/update-package/paas-team/paasjira/beta/0.0.1/39e8c424-57dc-bcf8-db29-e9d6f885228f-miniProgram.zip'
       },
       loginStatus: 0,
       userInfo: {},
@@ -66,6 +70,7 @@ class Naub extends React.Component {
     }
   }
   async handleClick(btn) {
+    console.warn('this', this)
     await this.validate(btn)
     const startAt = +new Date()
     const traceId = apiLog.traceStart(btn)
@@ -74,7 +79,10 @@ class Naub extends React.Component {
     })
     this.refreshLog()
 
-    return toast(btn, ['setWxappId'].includes(btn) && this.state.form).then(({ data: { data } }) => {
+    return toast(
+      btn,
+      ['setWxappId', 'file'].includes(btn) && this.state.form
+    ).then(({ data: { data } }) => {
       apiLog.traceEnd(traceId, { startAt, data })
       switch (btn) {
         case 'setWxappId':
@@ -83,7 +91,7 @@ class Naub extends React.Component {
         case 'check':
           this.setState(state => {
             Object.assign(state, data)
-            state.form.appid = state.appInfo.appid || state.form.appid
+            Object.assign(state.form, data.appInfo)
             return state
           })
           break
@@ -118,8 +126,8 @@ class Naub extends React.Component {
       this.refreshLog()
     })
   }
-  handleChange(type, e){
-    if(!e) return
+  handleChange(type, e) {
+    if (!e) return
     const value = e.target.value
     this.setState(state => {
       state.form[type] = value
@@ -132,46 +140,58 @@ class Naub extends React.Component {
   render() {
     return (
       <div className="main">
-        <div className="meta">
-          {['appid', 'projectname'].map(key => (
-            <input type="text" key={key} value={this.state.form[key]} onChange={this.handleChange.bind(this, key)} placeholder={`请输入 ${key}`}/>
-          ))}
-          常用小程序id: wx898945e5568b4ea3
-        </div>
+        <div className="meta">常用小程序id: wx898945e5568b4ea3</div>
         <div className="actions">
-          {[
-            'setWxappId',
-            0,
-            'create',
-            'upload',
-            'check',
-            0,
-            'admin-scan',
-            'admin-check',
-            0,
-            'qrcode',
-            'status',
-            'info',
-            0,
-            'ticket',
-            0,
-            'compile',
-            'commit',
-            'sync'
-          ].map(
-            (btn, idx) =>
-              btn ? (
-                <Button
-                  pending={this.state.btnStatus[btn]}
-                  key={idx}
-                  onClick={this.handleClick.bind(null, btn)}
-                >
-                  {btnDict[btn] || btn}
-                </Button>
-              ) : (
-                <br key={idx} />
-              )
-          )}
+          {['webappid', 'zipurl'].map(key => (
+            <input
+              type="text"
+              key={key}
+              value={this.state.form[key]}
+              onChange={this.handleChange.bind(this, key)}
+              placeholder={`请输入 ${key}`}
+            />
+          ))}
+          <ButtonGroup
+            btnStatus={this.state.btnStatus}
+            btnNames={['file']}
+            btnDict={btnDict}
+            onClick={this.handleClick}
+          />
+          {['appid', 'projectname'].map(key => (
+            <input
+              type="text"
+              key={key}
+              value={this.state.form[key]}
+              onChange={this.handleChange.bind(this, key)}
+              placeholder={`请输入 ${key}`}
+            />
+          ))}
+          <ButtonGroup
+            btnStatus={this.state.btnStatus}
+            btnNames={['setWxappId', 0, 'create', 'upload', 'check', 'report']}
+            btnDict={btnDict}
+            onClick={this.handleClick}
+          />
+          <ButtonGroup
+            btnStatus={this.state.btnStatus}
+            btnNames={[
+              0,
+              'admin-scan',
+              'admin-check',
+              0,
+              'qrcode',
+              'status',
+              'info',
+              0,
+              'ticket',
+              0,
+              'compile',
+              'commit',
+              'sync'
+            ]}
+            btnDict={btnDict}
+            onClick={this.handleClick}
+          />
         </div>
         <div className="meta">
           <pre>
