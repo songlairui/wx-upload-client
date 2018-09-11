@@ -24,6 +24,10 @@ li {
   margin: 0;
   padding: 0;
 }
+.channel > ul {
+  display: flex;
+  flex-direction: column-reverse;
+}
 
 button,
 input {
@@ -38,4 +42,8 @@ button {
   margin: 0.2em;
 }
 input {
+  min-width: 300px;
+}
+.input-item {
+  display: inline;
 }

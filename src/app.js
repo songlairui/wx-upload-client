@@ -2,9 +2,9 @@ import React from 'react'
 import ReactDOM from 'react-dom'
 import _ from 'lodash'
 
-import Button from './components/button'
 import ButtonGroup from './components/button-group'
-import { toast } from './api'
+import { toast, quick } from './api'
+import codes from './codes'
 
 const btnDict = {
   create: '创建小程序',
@@ -12,10 +12,21 @@ const btnDict = {
   check: '检查状态',
   'admin-scan': 'Admin 扫码登陆'
 }
+const defaultForm = {
+  taskid: '',
+  appid: '',
+  projectname: '',
+  webappid: 'random-id',
+  zipurl:
+    'http://paas-dist.oss-cn-hangzhou.aliyuncs.com/prod/update-package/paas-team/paasjira/beta/0.0.1/39e8c424-57dc-bcf8-db29-e9d6f885228f-miniProgram.zip'
+}
 import DebugChannel from './utils/channels'
 
 const apiLog = new DebugChannel()
-console.warn(apiLog)
+
+let timer = {
+  queryTask: null
+}
 
 class Naub extends React.Component {
   constructor(props) {
@@ -23,6 +34,7 @@ class Naub extends React.Component {
 
     this.state = {
       form: {
+        taskid: '',
         appid: '',
         projectname: '',
         webappid: 'random-id',
@@ -52,6 +64,17 @@ class Naub extends React.Component {
     this.handleClick = this.handleClick.bind(this)
     this.handleChange = this.handleChange.bind(this)
     this.validate = this.validate.bind(this)
+    this.clearPolling = this.clearPolling.bind(this)
+    this.clearTraces = this.clearTraces.bind(this)
+  }
+  clearPolling() {
+    timer.queryTask && clearTimeout(timer.queryTask)
+  }
+  clearTraces() {
+    this.setState(state => {
+      state.channels = []
+      return state
+    })
   }
   refreshLog() {
     this.setState(state => {
@@ -69,7 +92,11 @@ class Naub extends React.Component {
       default:
     }
   }
-  async handleClick(btn) {
+  async handleClick(xhttp, btn) {
+    if (!btn) {
+      btn = xhttp
+      xhttp = toast
+    }
     console.warn('this', this)
     await this.validate(btn)
     const startAt = +new Date()
@@ -78,20 +105,61 @@ class Naub extends React.Component {
       state.btnStatus[btn] = true
     })
     this.refreshLog()
-
-    return toast(
+    console.warn('api', xhttp.name)
+    return xhttp(
       btn,
-      ['setWxappId', 'file'].includes(btn) && this.state.form
-    ).then(({ data: { data } }) => {
+      ['setWxappId', 'file', 'quick-upload', 'query-task'].includes(btn) &&
+        this.state.form
+    ).then(({ data }) => {
       apiLog.traceEnd(traceId, { startAt, data })
+      if (!['quick-upload', 'query-task'].includes(btn)) {
+        data = data.data
+      }
+      let again = true
       switch (btn) {
+        case 'quick-upload':
+          this.setState(state => {
+            state.form.taskid = data.taskid
+            return state
+          })
+          timer.queryTask && clearTimeout(timer.queryTask)
+          timer.queryTask = setTimeout(() => {
+            this.handleClick(quick, 'query-task')
+          }, 2000)
+          break
+        case 'query-task':
+          console.warn(data)
+          switch (data.code) {
+            case codes.UPLOAD_FINISH:
+            case 400:
+              again = false
+              break
+            case codes.SCAN_WAITING:
+              this.setState(state => {
+                if (data.data.qrcode) state.queryQR.qrcode = data.data.qrcode
+                return state
+              })
+              break
+            default:
+          }
+          if (again) {
+            timer.queryTask && clearTimeout(timer.queryTask)
+            timer.queryTask = setTimeout(() => {
+              this.handleClick(quick, btn)
+            }, 2000)
+          }
+
+          break
         case 'setWxappId':
           this.handleClick('check')
           break
         case 'check':
           this.setState(state => {
             Object.assign(state, data)
-            Object.assign(state.form, data.appInfo)
+            Object.keys(data.appInfo).forEach(key => {
+              !data.appInfo[key] && delete data.appInfo[key]
+            })
+            Object.assign(state.form, defaultForm, data.appInfo)
             return state
           })
           break
@@ -122,6 +190,7 @@ class Naub extends React.Component {
 
       this.setState(state => {
         state.btnStatus[btn] = false
+        return state
       })
       this.refreshLog()
     })
@@ -142,49 +211,43 @@ class Naub extends React.Component {
       <div className="main">
         <div className="meta">常用小程序id: wx898945e5568b4ea3</div>
         <div className="actions">
-          {['webappid', 'zipurl'].map(key => (
-            <input
-              type="text"
-              key={key}
-              value={this.state.form[key]}
-              onChange={this.handleChange.bind(this, key)}
-              placeholder={`请输入 ${key}`}
-            />
-          ))}
           <ButtonGroup
             btnStatus={this.state.btnStatus}
-            btnNames={['file']}
+            btnNames={['quick-upload', 'query-task']}
             btnDict={btnDict}
-            onClick={this.handleClick}
+            onClick={this.handleClick.bind(this, quick)}
           />
-          {['appid', 'projectname'].map(key => (
-            <input
-              type="text"
-              key={key}
-              value={this.state.form[key]}
-              onChange={this.handleChange.bind(this, key)}
-              placeholder={`请输入 ${key}`}
-            />
-          ))}
-          <ButtonGroup
-            btnStatus={this.state.btnStatus}
-            btnNames={['setWxappId', 0, 'create', 'upload', 'check', 'report']}
-            btnDict={btnDict}
-            onClick={this.handleClick}
-          />
+
+          {['taskid', 'webappid', 'zipurl', 'appid'].map(
+            key =>
+              key ? (
+                <div className="input-item" key={key}>
+                  <span>{`${key}:`}</span>
+                  <input
+                    type="text"
+                    value={this.state.form[key]}
+                    onChange={this.handleChange.bind(this, key)}
+                    placeholder={`请输入 ${key}`}
+                  />
+                </div>
+              ) : (
+                <br />
+              )
+          )}
           <ButtonGroup
             btnStatus={this.state.btnStatus}
             btnNames={[
+              'setWxappId',
+              'file',
               0,
+              'check',
+              'report',
               'admin-scan',
               'admin-check',
-              0,
               'qrcode',
               'status',
               'info',
-              0,
               'ticket',
-              0,
               'compile',
               'commit',
               'sync'
@@ -192,6 +255,8 @@ class Naub extends React.Component {
             btnDict={btnDict}
             onClick={this.handleClick}
           />
+          <button onClick={this.clearPolling}>clear timer</button>
+          <button onClick={this.clearTrace}>clear traces</button>
         </div>
         <div className="meta">
           <pre>
@@ -214,7 +279,7 @@ class Naub extends React.Component {
               <div className="channel" key={channel.name}>
                 {channel.name}
                 <ul>
-                  {channel.trace.reverse().map((trace, idx) => (
+                  {channel.trace.map((trace, idx) => (
                     <li key={idx}>
                       <div className="stamp">
                         {trace.startAt} - {trace.endAt}

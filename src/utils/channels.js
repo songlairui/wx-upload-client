@@ -28,6 +28,7 @@ class DebugChannel {
     }
     this.latestStamp = endAt
     this.channels[name].trace.push(Object.assign(payload, { endAt }))
+    if (this.channels[name].trace.length > 5) this.channels[name].trace.shift()
     return
   }
   traceStart(name, payload) {

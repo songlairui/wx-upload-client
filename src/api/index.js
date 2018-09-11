@@ -10,6 +10,10 @@ export async function toast(action, payload) {
   return http.post('/toast', { action, payload })
 }
 
+export async function quick(action, payload) {
+  return http.post(`/${action}`, payload)
+}
+
 export async function prepare(params) {
   return http.post('/prepares', params)
 }
